@@ -17,13 +17,36 @@ import AudioToolbox
 class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegate, KCFloatingActionButtonDelegate, DZNEmptyDataSetSource, DZNEmptyDataSetDelegate, UNUserNotificationCenterDelegate {
   
   @IBOutlet var emptyView: UIView!
-  var itemsFromCoreData: [NSManagedObject] = []
+  
+  
+  
   @IBOutlet weak var tableView: UITableView!
   var ck : CloudKitHelper!
   
   var isUsingICloud = false
   
-  var items: [String] = []
+  var coreData = CoreDataConnection.sharedInstance
+  
+  var itemsFromCoreData: [NSManagedObject] {
+    
+    get {
+      
+      var resultArray:Array<NSManagedObject>!
+      let managedContext = coreData.persistentContainer.viewContext
+      //2
+      let fetchRequest =
+        NSFetchRequest<NSManagedObject>(entityName: CoreDataConnection.kItem)
+      //3
+      do {
+        resultArray = try managedContext.fetch(fetchRequest)
+      } catch let error as NSError {
+        print("Could not fetch. \(error), \(error.userInfo)")
+      }
+      
+      return resultArray
+    }
+    
+  }
   
   
   override func viewWillAppear(_ animated: Bool) {
@@ -35,13 +58,7 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     let fetchRequest =
       NSFetchRequest<NSManagedObject>(entityName: CoreDataConnection.kItem)
     
-    //3
-    do {
-      itemsFromCoreData = try managedContext.fetch(fetchRequest)
-      
-    } catch let error as NSError {
-      print("Could not fetch. \(error), \(error.userInfo)")
-    }
+    
    
   }
   
@@ -59,6 +76,7 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
   }
   
   override func viewDidLoad() {
+    
     super.viewDidLoad()
     
     UNUserNotificationCenter.current().delegate = self
@@ -105,7 +123,7 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     
   }
   
-  // MARK: emptydelegate
+  // MARK: KCFloatingActionButtonDelegate
   func image(forEmptyDataSet scrollView: UIScrollView!) -> UIImage! {
     return UIImage(named: "add");
   }
@@ -113,11 +131,10 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
   func title(forEmptyDataSet scrollView: UIScrollView!) -> NSAttributedString! {
     let text = "empty"
     
-    let attributes = [NSFontAttributeName: UIFont.boldSystemFont(ofSize: 18.0),
+    let attributes = [NSFontAttributeName: UIFont.boldSystemFont(ofSize: 23.0),
                       NSForegroundColorAttributeName: UIColor.darkGray];
     
     return NSAttributedString.init(string: text, attributes: attributes)
-    
     
   }
   
@@ -147,19 +164,26 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     present(alert, animated: true)
   }
   
+  // MARK: - CoreData
+  
   func saveToCoreData(_ title: String, progress: Double){
-    
+
     // SAVE to CloudKit
     let todoRecord = CKRecord(recordType: "TodoList")
     
-    todoRecord.setValue(title, forKey: "title")
-    todoRecord.setValue(progress, forKey: "progress")
-    
-    ck.privateDB.save(todoRecord) { (record, error) in
+    if isUsingICloud == true {
       
-      print("cloudkit \(record)")
+      todoRecord.setValue(title, forKey: "title")
+      todoRecord.setValue(progress, forKey: "progress")
+      
+      ck.privateDB.save(todoRecord) { (record, error) in
+        
+        print("cloudkit \(record!)")
+
+      }
       
     }
+    
     
     // save core data
     let managedContext =
@@ -179,7 +203,6 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     // 4
     do {
       try managedContext.save()
-      itemsFromCoreData.append(item)
     } catch let error as NSError {
       print("Could not save. \(error), \(error.userInfo)")
     }
@@ -222,37 +245,49 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     let item = itemsFromCoreData[indexPath.row] as! Item
     
     if (item.progress == 1.0){
+      
       item.progress = 0.0
+      
     }else{
+      
       AudioServicesPlayAlertSound(SystemSoundID(kSystemSoundID_Vibrate))
       item.progress = 1.0
+      
     }
     
-    
     do {
+      
       try CoreDataConnection.sharedInstance.persistentContainer.viewContext.save()
+      
     } catch let error as NSError {
+      
       print("Could not save. \(error), \(error.userInfo)")
+      
     }
     
     tableView.reloadRows(at: [indexPath], with: .automatic)
     
     // update to cloudkit
+
     
-    let recordID = CKRecordID(recordName: item.recordID!)
-    
-    ck.privateDB.fetch(withRecordID: recordID) { (record, error) in
+    if isUsingICloud == true {
       
-      record?.setValue(item.progress, forKey: "progress")
+      let recordID = CKRecordID(recordName: item.recordID!)
       
-      self.ck.privateDB.save(record!) { (record, error) in
+      ck.privateDB.fetch(withRecordID: recordID) { (record, error) in
         
-        print("cloudkit \(record)")
+        record?.setValue(item.progress, forKey: "progress")
+        
+        self.ck.privateDB.save(record!) { (record, error) in
+          
+          print("cloudkit \(record)")
+          
+        }
         
       }
       
     }
-    
+
     
   }
   
@@ -320,7 +355,7 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
             
             do {
               try managedContext.save()
-              self.itemsFromCoreData.append(item)
+
             } catch let error as NSError {
               print("Could not save. \(error), \(error.userInfo)")
             }
@@ -377,6 +412,7 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
   }
   
   func subscribeForNotification(){
+    
     ck.privateDB.fetchAllSubscriptions { (subscriptions, error) in
       
       print("all subsription \(subscriptions)")
@@ -384,16 +420,12 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     }
     
     //
-    
     let predicate = NSPredicate(value: true)
     let subscription = CKQuerySubscription(recordType: "TodoList", predicate: predicate, options: [.firesOnRecordUpdate , .firesOnRecordCreation , .firesOnRecordDeletion, .firesOnce])
     
     let notification = CKNotificationInfo()
-    
     notification.alertBody = "There's a changes."
-    notification.soundName = "default"
-    
-    
+    notification.soundName = "Default"
     
     subscription.notificationInfo = notification
     
@@ -402,11 +434,42 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
         print("subscription error \(error.localizedDescription)")
       }
     }
+    
+  }
+  
+  func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+
+    return true
+    
+  }
+  
+  func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+    
+    if (editingStyle == .delete){
+      
+      let item = itemsFromCoreData[indexPath.row] as! Item
+      
+      if isUsingICloud == true {
+        let recordID = CKRecordID(recordName: item.recordID!)
+        self.ck.privateDB.delete(withRecordID: recordID, completionHandler: { (record, error) in
+          print("cloudkit \(record)")
+        })
+      }
+      
+      self.coreData.deleteManagedObject(managedObject: item, completion: { (success) in
+        
+        if (success){
+          tableView.deleteRows(at:[indexPath], with: .automatic)
+        }
+        
+      })
+      
+      
+    }
   }
   
   
   // MARK: - UNUserNotificationCenterDelegate
-  
   
   
   func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
@@ -417,6 +480,13 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     
     sync()
     
+  }
+  
+  @IBAction func refresh(_ sender: Any) {
+
+    tableView.reloadData()
+//    sync()
+  
   }
   
   func sync(){
@@ -493,7 +563,7 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
             
             do {
               try managedContext.save()
-              self.itemsFromCoreData.append(item)
+//              self.itemsFromCoreData.append(item)
             } catch let error as NSError {
               print("Could not save. \(error), \(error.userInfo)")
             }
@@ -527,6 +597,8 @@ class ViewController: UIViewController,UITableViewDataSource, UITableViewDelegat
     
     
   }
+  
+  
   
   
 }

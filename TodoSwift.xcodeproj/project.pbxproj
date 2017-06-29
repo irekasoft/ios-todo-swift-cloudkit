@@ -34,7 +34,7 @@
 		A371BE561E13EEBE00C6C854 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A371BE591E13EEBE00C6C854 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		A371BE5B1E13EEBE00C6C854 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A371BE611E13EEE300C6C854 /* CoreDataConnection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CoreDataConnection.swift; sourceTree = "<group>"; };
+		A371BE611E13EEE300C6C854 /* CoreDataConnection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = CoreDataConnection.swift; path = TodoSwift/CoreDataConnection.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				A342746D1E14027D00FDEB60 /* CloudKitHelper.swift */,
+				A371BE611E13EEE300C6C854 /* CoreDataConnection.swift */,
 				A371BE4B1E13EEBE00C6C854 /* TodoSwift */,
 				A371BE4A1E13EEBE00C6C854 /* Products */,
 				218986F7DC0F92F6DC9E8DCD /* Pods */,
@@ -94,7 +95,6 @@
 				A371BE4C1E13EEBE00C6C854 /* AppDelegate.swift */,
 				A371BE4E1E13EEBE00C6C854 /* ViewController.swift */,
 				A371BE501E13EEBE00C6C854 /* Main.storyboard */,
-				A371BE611E13EEE300C6C854 /* CoreDataConnection.swift */,
 				A371BE561E13EEBE00C6C854 /* Assets.xcassets */,
 				A371BE581E13EEBE00C6C854 /* LaunchScreen.storyboard */,
 				A371BE5B1E13EEBE00C6C854 /* Info.plist */,

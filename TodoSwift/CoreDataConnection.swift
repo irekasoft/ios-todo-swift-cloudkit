@@ -25,7 +25,7 @@ class CoreDataConnection: NSObject {
   // MARK: - Core Data Saving support
   
   func saveContext () {
-    let context = persistentContainer.viewContext
+    let context = CoreDataConnection.sharedInstance.persistentContainer.viewContext
     if context.hasChanges {
       do {
         try context.save()
@@ -34,6 +34,25 @@ class CoreDataConnection: NSObject {
         fatalError("Unresolved error \(nserror), \(nserror.userInfo)")
       }
     }
+  }
+  
+  func deleteManagedObject( managedObject: NSManagedObject, completion:(_ result: Bool ) -> Void) {
+    
+    let managedContext =
+      CoreDataConnection.sharedInstance.persistentContainer.viewContext
+    
+    managedContext.delete(managedObject)
+    
+    do {
+
+      try managedContext.save()
+      completion(true)
+      
+    } catch let error as NSError {
+      print("Could not save. \(error), \(error.userInfo)")
+      completion(false)
+    }
+    
   }
   
 }
